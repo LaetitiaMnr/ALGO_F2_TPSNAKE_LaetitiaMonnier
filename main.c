@@ -102,7 +102,7 @@ int main()
 //BUT : Fonction indiquant les règles du jeu consultable dans le menu par le joueur.
 void reglesDuJeu()
 {
-    printf("- Utilisez les fleches afin de guider votre serpent\n");
+    printf("- Utilisez les fleches afin de guider votre serpent.\n");
     printf("- Nourrissez celui-ci afin qu'il soit le plus grand possible.\n");
     printf("- S'il touche le mur ou son propre corps le jeu se termine et vous avez perdu !\n");
 }
