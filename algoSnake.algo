@@ -1,0 +1,272 @@
+ALGO : Le jeu du serpent. Laetitia Monnier
+
+// chars representant la direction de la tete du serpent
+CONST :
+    SERP_TETE_H	<- '^' : CARACTERE 
+    SERP_TETE_B	<- 'V' : CARACTERE
+    SERP_TETE_G	<- '<' : CARACTERE	
+    SERP_TETE_D	<- '>' : CARACTERE
+    SERP_CORP <- 'o' : CARACTERE
+
+//Directions
+    DIR_HAUT <- 72 : ENTIER
+    DIR_BAS <- 80 : ENTIER
+    DIR_DROITE <- 77 : ENTIER
+    DIR_GAUCHE <- 75 : ENTIER
+
+// Taille
+    HAUTEUR <- 20 : ENTIER
+    LARGEUR <- 30 : ENTIER
+    TAILLE <- 200 : ENTIER
+
+ENUMERATION ETATSERP
+    estMort, seNourrit
+FINENUMERATION
+
+TYPE
+    COORD = ENREGISTREMENT
+        X : ENTIER
+        Y : ENTIER
+FINENREGISTREMENT
+
+//BUT : Fonction indiquant les règles du jeu consultable dans le menu par le joueur.
+PROCEDURE reglesDuJeu()
+DEBUT
+    ECRIRE("- Utilisez les fleches afin de guider votre serpent.")
+    ECRIRE("- Nourrissez celui-ci afin qu'il soit le plus grand possible.")
+    ECRIRE("- s'il touche le mur ou son propre corps le jeu se termine et vous avez perdu !")
+FIN PROCEDURE
+
+
+//BUT : Fonction permetttant de créer les murs de la map.
+//SORTIE : Un rectangle vide.
+PROCEDURE creationMurs()
+VAR
+    i, j : ENTIER 
+    i <- 0
+    j <- 0
+DEBUT
+    POUR i <- 0 A HAUTEUR FAIRE
+        POUR j <- 0 A LARGEUR FAIRE
+            SI ((i = 0) OU (i = HAUTEUR - 1) OU (j = 0) OU (j = LARGEUR - 1)) ALORS
+                ECRIRE("*")
+            SINON
+                ECRIRE(" ")
+            FINSI
+        FINPOUR
+    FINPOUR
+        printf("\n");
+FIN PROCEDURE
+
+//BUT : Fonction générant un fruit au hasard sur la map.
+//SORTIE : Coordonnée d'un fruit puis son affichage.
+FONCTION generationNourriture()
+VAR
+    fruit : COORD
+DEBUT
+    fruit.X <- (aleatoire() % (LARGEUR - 2)) + 1
+    fruit.Y <- (aleatoire() % (HAUTEUR - 2)) + 1
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), fruit)
+    ECRIRE('O')
+
+    generationNourriture <- fruit
+FIN FONCTION
+
+FONCTION etatDuSerpent(COORD corpSerpent[], COORD fruit, int nb)
+VAR
+    i : ENTIER
+DEBUT
+    i <- 0
+    POUR i <- 1 A nb ALORS
+        SI ((corpSerpent[0].X = corpSerpent[i].X) ET (corpSerpent[0].Y = corpSerpent[i].Y)) ALORS
+            etatDuSerpent <- estMort
+        FINSI
+    FINPOUR
+
+    SI ((corpSerpent[0].X <= 0) OU (corpSerpent[0].X >= LARGEUR - 1) OU (corpSerpent[0].Y <= 0) OU (corpSerpent[0].Y >= HAUTEUR - 1)) ALORS
+        etatDuSerpent <- estMort
+    SINON SI ((fruit.X == corpSerpent[0].X) && (fruit.Y == corpSerpent[0].Y)) ALORS
+        etatDuSerpent <- seNourrit
+    SINON
+        etatDuSerpent <- -1
+FIN FONCTION
+
+//BUT : Fonction permettant de faire avancer le serpent et de gérer les conséquences des mouvements (collisions, changements de direction, mange).
+PROCEDURE avanceSerp(var keyPress, var derniereTouche, corpSerpent[], var fruit, var vie, var nb)
+VAR
+    teteSerp : CARACTERE
+    i, toucheValide : ENTIER
+DEBUT
+    i <- 1
+    toucheValide <- 0
+
+    //Tant que l'utilisateur n'a pas appuyé sur une autre touche, le serpent avance dans la même direction.
+    TANT QUE (!kbhit()){
+        vitesse(200)
+
+        //Permet d'effacer le corps.
+        POUR i <- 0 A *nb FAIRE
+            ConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), corpSerpent[i])
+            ECRIRE(" ")
+        FINPOUR
+
+        //Permet de faire avancer tout le corps.
+        POUR (i <- *nb - 1 A 0
+            corpSerpent[i].Y <- corpSerpent[i - 1].Y
+            corpSerpent[i].X <- corpSerpent[i - 1].X
+
+            SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), corpSerpent[i])
+            ECRIRE(SERP_CORP)
+        FINPOUR
+
+        toucheValide <- 0
+        TANT QUE (toucheValide = 0) 
+            CAS PARMI (keyPress)
+                case DIR_HAUT:
+                    SI (derniereTouche != DIR_BAS) ALORS
+                        corpSerpent[0].Y -= 1
+                        teteSerp <- SERP_TETE_H
+                        toucheValide <- 1
+                    SINON
+                        keyPress <- derniereTouche
+                    FINSI
+
+                case DIR_DROITE:
+                    SI (*derniereTouche != DIR_GAUCHE) ALORS
+                        corpSerpent[0].X += 1
+                        teteSerp <- SERP_TETE_D
+                        toucheValide <- 1
+                    SINON
+                        keyPress <- derniereTouche
+                    FINSI
+
+                case DIR_GAUCHE:
+                    if (*derniereTouche != DIR_DROITE) ALORS
+                        corpSerpent[0].X -= 1
+                        teteSerp <- SERP_TETE_G
+                        toucheValide <- 1
+                    SINON
+                        keyPress <- derniereTouche
+                    FINSI
+
+                case DIR_BAS:
+                    SI (*derniereTouche != DIR_HAUT) ALORS
+                        corpSerpent[0].Y += 1
+                        teteSerp = SERP_TETE_B
+                        toucheValide = 1
+                    SINON
+                        keyPress = derniereTouche
+                    FINSI
+                default:
+                    keyPress <- derniereTouche
+            FINCASPARMI
+        FINTANTQUE
+
+        derniereTouche <- keyPress
+
+        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), corpSerpent[0])
+        ECRIRE(teteSerp)
+
+        //Appel de l'enum afin de tester les différents états du serpent.
+        CAS PARMI (etatDuSerpent(corpSerpent, fruit, nb)
+            case seNourrit:
+                nb += 1
+
+                REPETER
+                    fruit <- generationNourriture()
+                JUSQU'A ((fruit.X = corpSerpent[i].X) ET (fruit.Y = corpSerpent[i].Y))
+
+            case estMort:
+                *vie -= 1
+        FINCASPARMI
+    FINTANTQUE
+FIN PROCEDURE
+
+//BUT : Fonction affichant que le joueur à perdu et demande s'il veut rejouer.
+//ENTREE : 0ui ou non.
+//SORTIE : Soit le joueur revient sur le menu,soit il quitte le programme.
+PROCEDURE affichagePerdu(var arretJeu)
+VAR
+    rep : CARACTERE
+DEBUT
+    rep <- ' '
+
+    effaceEcran("@cls||clear")
+    ECRIRE("Vous etes mort !")
+    ECRIRE("Voulez vous rejouer ? O/N")
+    LIRE(rep)
+    rep = tolower(rep)
+
+    SI (rep = 'n') ALORS
+        ECRIRE("a bientot")
+        arretJeu <- 1
+    FINSI
+FIN PROCEDURE
+
+
+
+// --- Programme Principal ---
+
+
+//BUT : Fonction principale contenant un menu dans lequel le joueur peut naviguer. Il peut jouer au snake, voir les règles du jeu ou quitter le programme.
+//ENTREE : Le choix du joueur (1/2/3).
+//SORTIE : En fonction du choix du joueur, le programme affichera des données différentes.
+VAR 
+    arretJeu, choix, vie, nb, keyPress : ENTIER 
+    rep : CARACTERE
+    corpSerpent[TAILLE] : COORD
+    fruit : COORD
+DEBUT
+    aleatoire()
+    arretJeu <- 0
+
+    TANT QUE (arretJeu = 0)
+        int choix <- 0
+        vie <- 1
+        nb <- 4
+        keyPress <- 0
+        derniereTouche <- 0
+        rep <- ' '
+        corpSerpent[TAILLE] <- {{10, 10}, {9, 10}, {8, 10}, {7, 10}}
+        fruit <- {0,0}
+
+        effaceEcran()
+        ECRIRE("--- Bienvenu sur le jeu du Snake ---")
+        ECRIRE("--- Menu ---")
+        ECRIRE("1. Jouer :")
+        ECRIRE("2. Regles du jeu :")
+        ECRIRE("3. Quitter :")
+        LIRE(choix)
+
+        CAS PARMI (choix)
+            case 1:
+                effaceEcran()
+                creationMurs()
+                fruit = generationNourriture()
+
+                REPETER
+                    keyPress = prendreChar()
+                    avanceSerp(keyPress, derniereTouche, corpSerpent, fruit, vie, nb)
+                JUSQU'A (vie > 0)
+                affichagePerdu(arretJeu)
+
+            case 2:
+                effaceEcran()
+                reglesDuJeu()
+                ECRIRE("Retour menu ? O/N :")
+                LIRE(rep)
+                rep = tolower(rep)
+
+                SI (rep = 'n')
+                    ECRIRE("a bientot\")
+                    arretJeu <- 1
+                FINSI
+
+            case 3:
+                effaceEcran()
+                printf("a bientot")
+                arretJeu <- 1
+
+        FINCASPARMI
+    FINTANTQUE
+FIN
